@@ -132,4 +132,62 @@ class MeshRelaxer:
         # 4. Apply all accumulated forces to update the mesh vertices.
         # 5. Increment the iteration counter `self.step` by 1.
         # 6. After the loop finishes, return the relaxed `self.mesh`.
-        pass
+
+        for _ in range(self.iterations):
+            # Initialize forces for all vertices
+            for vertex in self.mesh.vertices():
+                self.mesh.vertex_attribute(vertex, "force", Vector(0, 0, 0))
+
+            # Interior forces: Laplacian smoothing
+            for vertex in self.interior_vertices:
+                if self.mesh.vertex_attribute(vertex, "fixed"):
+                    continue
+                neighbors = self.mesh.vertex_neighbors(vertex)
+                if not neighbors:
+                    continue
+                force = Vector(0, 0, 0)
+                for neighbor in neighbors:
+                    force += self.mesh.edge_vector((vertex, neighbor)) * self.damping / len(neighbors)
+                self.mesh.vertex_attribute(vertex, "force", force)
+
+            # Boundary forces: snap boundary vertices to the target polyline
+            if self.goals and self.goals.target_boundary:
+                for vertex in self.boundary_vertices:
+                    if self.mesh.vertex_attribute(vertex, "fixed"):
+                        continue
+                    pt = self.mesh.vertex_point(vertex)
+                    closest = closest_point_on_polyline(pt, self.goals.target_boundary)
+                    force = Vector.from_start_end(pt, closest)
+                    self.mesh.vertex_attribute(vertex, "force", force)
+
+            # Corner forces: lock corner vertices to their anchor points
+            if self.goals and self.goals.target_corners:
+                for vertex in self.boundary_vertices:
+                    pt = self.mesh.vertex_point(vertex)
+                    for corner in self.goals.target_corners:
+                        if pt.distance_to_point(corner) < 1e-3:
+                            self.mesh.vertex_attribute(vertex, "fixed", True)
+                            self.mesh.vertex_attribute(vertex, "force", Vector(0, 0, 0))
+                            break
+
+            # # Apply modifiers
+            for modifier in self.modifiers:
+                modifier.apply(self, self.mesh)
+
+            # Apply forces to update vertex positions
+            for vertex in self.mesh.vertices():
+                force = self.mesh.vertex_attribute(vertex, "force")
+                pt = self.mesh.vertex_point(vertex)
+                new_pt = pt + force
+                self.mesh.vertex_attributes(vertex, "xyz", list(new_pt))
+
+            # Snap to surface
+            if self.snap_to_surface and self.goals and self.goals.target_surface:
+                for vertex in self.mesh.vertices():
+                    pt = self.mesh.vertex_point(vertex)
+                    closest = self.goals.target_surface.closest_point(pt)
+                    self.mesh.vertex_attributes(vertex, "xyz", list(closest))
+
+            self.step += 1
+
+        return self.mesh

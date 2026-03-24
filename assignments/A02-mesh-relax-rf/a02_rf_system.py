@@ -27,6 +27,7 @@ class RFSystem:
     def __init__(self, mesh: Mesh):
         self.mesh = mesh
         self.timber_model = None
+        print("Creating RF data structure...")
 
     @property
     def centerlines(self) -> list:
@@ -153,9 +154,9 @@ class RFSystem:
 
             self.mesh.edge_attribute(edge, "centerline", centerline)
 
-    # ========================================================================
-    # CHALLENGE 01: Attractors
-    # ========================================================================
+        # ========================================================================
+        # CHALLENGE 01: Attractors
+        # ========================================================================
 
     def eccentrize_centerlines_attractor_point(self, point: Point, factor: float) -> None:
         """
@@ -172,7 +173,31 @@ class RFSystem:
         # 8. Calculate the start and end displacements using the direction vectors and eccentricity values
         # 9. Apply the displacements to the start and end of the centerline
         # 10. Update the centerline attribute for the current edge
-        pass
+
+        for edge in self.mesh.edges():
+            if self.mesh.is_edge_on_boundary(edge):
+                continue
+
+            next_edge = self.mesh.edge_attribute(edge, "next_edge")
+            prev_edge = self.mesh.edge_attribute(edge, "prev_edge")
+            centerline = self.mesh.edge_attribute(edge, "centerline")
+
+            next_direction = self.mesh.edge_direction(next_edge)
+            prev_direction = self.mesh.edge_direction(prev_edge)
+
+            pt_start = self.mesh.vertex_point(edge[0])
+            pt_end = self.mesh.vertex_point(edge[1])
+
+            max_eccentricity = centerline.length * 0.45
+            eccentricity_start = min(pt_start.distance_to_point(point) * factor, max_eccentricity)
+            eccentricity_end = min(pt_end.distance_to_point(point) * factor, max_eccentricity)
+
+            start_shift = prev_direction * eccentricity_start
+            end_shift = (-start_shift) + next_direction * eccentricity_end
+
+            centerline.start += start_shift
+            centerline.end += end_shift
+            self.mesh.edge_attribute(edge, "centerline", centerline)
 
     def eccentrize_centerlines_attractor_curve(self, curve, factor: float) -> None:
         """Eccentrize centerlines base on the distance to an attractor curve."""
@@ -187,4 +212,31 @@ class RFSystem:
         # 9. Calculate the start and end displacements using the direction vectors and eccentricity values
         # 10. Apply the displacements to the start and end of the centerline
         # 11. Update the centerline attribute for the current edge
-        pass
+
+        for edge in self.mesh.edges():
+            if self.mesh.is_edge_on_boundary(edge):
+                continue
+
+            next_edge = self.mesh.edge_attribute(edge, "next_edge")
+            prev_edge = self.mesh.edge_attribute(edge, "prev_edge")
+            centerline = self.mesh.edge_attribute(edge, "centerline")
+
+            next_direction = self.mesh.edge_direction(next_edge).unitized()
+            prev_direction = self.mesh.edge_direction(prev_edge).unitized()
+
+            pt_start = self.mesh.vertex_point(edge[0])
+            pt_end = self.mesh.vertex_point(edge[1])
+
+            closest_start = curve.closest_point(pt_start)
+            closest_end = curve.closest_point(pt_end)
+
+            max_eccentricity = centerline.length * 0.45
+            eccentricity_start = min(pt_start.distance_to_point(closest_start) * factor, max_eccentricity)
+            eccentricity_end = min(pt_end.distance_to_point(closest_end) * factor, max_eccentricity)
+
+            start_shift = prev_direction * eccentricity_start
+            end_shift = next_direction * eccentricity_end
+
+            centerline.start += start_shift
+            centerline.end += end_shift
+            self.mesh.edge_attribute(edge, "centerline", centerline)

@@ -45,15 +45,15 @@ class TimberModelCreator:
 
         # Step 1: Geometry
         # Call the method that creates beams
-        # ...
+        self._create_beams()
 
         # Step 2: Definitions
         # Call the method that adds rules
-        # ...
+        self._add_topology_rules()
 
         # Step 3: Calculation
         # Call the method that applies rules
-        # ...
+        self._apply_rules(process_joinery)
 
         print("Model generation complete.")
         return self.timber_model
@@ -67,12 +67,17 @@ class TimberModelCreator:
         cross_section_orientation = Vector(0, 0, 1)
 
         # Loop over self.lines
-        # for line in self.lines:
-        # Create a Beam using Beam.from_centerline
-        # beam = ...
+        for line in self.lines:
+            # Create a Beam using Beam.from_centerline
+            beam = Beam.from_centerline(
+                centerline=line,
+                width=self.beam_width,
+                height=self.beam_height,
+                z_vector=cross_section_orientation
+            )
 
-        # Add the beam to self.timber_model
-        # ...
+            # Add the beam to self.timber_model
+            self.timber_model.add_element(beam)
 
     def _add_topology_rules(self) -> None:
         """
@@ -82,29 +87,29 @@ class TimberModelCreator:
         """
         # Case 1: CROSSING (X-Shape)
         # When two beams pass each other (typical in grid shells or reciprocal frames).
-        # self._rules.append(TopologyRule(topology_type=..., joint_type=..., max_distance=self.tolerance))
+        self._rules.append(TopologyRule(JointTopology.TOPO_X, XLapJoint, self.tolerance))
 
         # Case 2: MEETING (T-Shape)
         # When one beam ends perpendicularly against another.
-        # self._rules.append(TopologyRule(...))
+        self._rules.append(TopologyRule(JointTopology.TOPO_T, TButtJoint, self.tolerance))
 
         # Case 3: CORNER (L-Shape)
         # When two beams meet at their ends (like a picture frame).
-        # self._rules.append(TopologyRule(...))
+        self._rules.append(TopologyRule(JointTopology.TOPO_L, LMiterJoint, self.tolerance))
 
     def _apply_rules(self, process_joinery: bool) -> None:
         """
         Runs the solver to find intersections and apply the rules we defined above.
         """
         # Create a JointRuleSolver with our rules
-        # solver = ...
+        solver = JointRuleSolver(self._rules)
 
         # Find pairs of beams that match our rules
-        # found_joints = ...
-        # print(f"Found and applied {len(found_joints)} joint rules.")
+        found_joints = solver.apply_rules_to_model(self.timber_model)
+        print(f"Found and applied {len(found_joints)} joint rules.")
 
         # Actually cut the geometry (this can be slow for large models)
         if process_joinery:
             print("Processing geometry (cutting joints)...")
             # element geometry processing
-            # ...
+            self.timber_model.process_joinery()

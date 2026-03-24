@@ -42,18 +42,19 @@ class TimberModelCreator:
 
         # Step 1: Geometry
         # Call the method that creates beams
-        # ...
+        self._create_beams()
         print(f"Generated {len(list(self.timber_model.beams))} beams.")
 
         # Step 2: Definitions
         # Reset rules and call the method that adds rules
         # Two options: add general rules based on categories/topology
         # Or, alternatively, define rules based on the RF edge graph
-        # ...
+        self._rules = []
+        self._add_rules()
 
         # Step 3: Calculation
         # Call the method that applies rules
-        # ...
+        self._apply_rules(process_joinery)
 
         print("Model generation complete.")
 
@@ -68,28 +69,33 @@ class TimberModelCreator:
         Convert every RF edge into a `Beam` and store the beam back on the edge.
         """
         # Get the mesh from the RF system
-        # ...
+        mesh = self.rf_system.mesh
 
         # Loop through all edges in the mesh
-        # for ..
-        #    Read the edge centerline
-        #     ..
+        for edge in mesh.edges():
+            # Read the edge centerline
+            centerline = mesh.edge_attribute(edge, "centerline")
 
-        #    Read the edge normal
-        #    ...
+            # Read the edge normal
+            normal = mesh.edge_attribute(edge, "normal")
 
-        #    Create a Beam from the centerline using the configured width/height
-        #    ...
+            if centerline is None:
+                print(f"Warning: Edge {edge} has no centerline attribute.")
+                continue
 
-        #    Store a category attribute on the beam (e.g. "boundary" or "interior")
-        #    Use `self._edge_category(edge)` to compute it
-        #    ...
+            # Create a Beam from the centerline using the configured width/height
+            beam = Beam.from_centerline(centerline=centerline, width=self.beam_width, height=self.beam_height, z_vector=normal)
 
-        #    Add the beam to `self.timber_model`
-        #    ...
+            # Store a category attribute on the beam (e.g. "boundary" or "interior")
+            # Use `self._edge_category(edge)` to compute it
+            category = self._edge_category(edge)
+            beam.attributes["category"] = category
 
-        #    Store the created beam back on the mesh edge as an attribute
-        #    ...
+            # Add the beam to `self.timber_model`
+            self.timber_model.add_element(beam)
+
+            # Store the created beam back on the mesh edge as an attribute
+            mesh.edge_attribute(edge, "beam", beam)
 
     def _edge_category(self, edge) -> str:
         if self.rf_system.mesh.is_edge_on_boundary(edge):
@@ -107,38 +113,44 @@ class TimberModelCreator:
         """
         # Case 1: TWO INTERIOR BEAMS (CATEGORY)
         # When two interior beams meet, assign a lap joint (X-Lap)
-        # ...
+        self._rules.append(CategoryRule(XLapJoint, "interior", "interior", self.tolerance))
 
         # Case 2: AN INTERIOR BEAM MEETS A BOUNDARY BEAM (CATEGORY)
         # When an interior beam meets a boundary beam, assign a butt or step joint
-        # ...
+        self._rules.append(CategoryRule(TStepJoint, "interior", "boundary", self.tolerance))
 
         # Case 3: TWO BOUNDARY BEAMS (CATEGORY)
         # When two boundary beams meet (usually at the corners), assign a miter joint
-        # ...
+        self._rules.append(CategoryRule(LMiterJoint, "boundary", "boundary", self.tolerance))
 
         # Case 4: MEETING (T-Shape)
         # The default rule for topological T-joints (one beam ends against the face of another)
-        # ...
+        self._rules.append(TopologyRule(JointTopology.TOPO_T, TButtJoint, self.tolerance))
 
     def _apply_rules(self, process_joinery: bool) -> None:
         """
         Runs the solver to find intersections and apply the rules we defined above.
         """
         # Reset the list of joining errors before running the solver
-        # ...
+        self.joining_errors = []
 
         # Create a JointRuleSolver instance
-        # ...
+        solver = JointRuleSolver(self._rules)
 
         # Ask the solver to apply the rules to `self.timber_model`
         # It returns: (joining_errors, unjoined_clusters)
+        self.joining_errors, unjoined_clusters = solver.apply_rules_to_model(self.timber_model)
 
         # If there are joining errors, print a header and then print each error on its own line
-        # ...
+        if self.joining_errors:
+            print(f"⚠️  {len(self.joining_errors)} joining errors occurred:")
+            for error in self.joining_errors:
+                print(f"  - {error}")
 
         # If `process_joinery` is True, process/cut the joint geometry
-        # ...
+        if process_joinery:
+            print("Processing geometry (cutting joints)...")
+            self.timber_model.process_joinery()
 
     # --------------------------------------------------------------------------
     # Optional: direct joint strategies (more explicit, less scalable)
