@@ -38,8 +38,9 @@ The central platform for all course content is [Moodle](https://moodle-app2.let.
 * [Week 02](lectures/week-02/README.md) | [📚 Assignment A01: Brep meshing](assignments/A01-mesh-brep-rf/README.md)
 * [Week 03](lectures/week-03/README.md) | No assignment
 * [Week 04](lectures/week-04/README.md) | [📚 Assignment 02: Mesh relaxation](assignments/A02-mesh-relax-rf/README.md)
-
-
+* Week 05: Seminar week
+* Week 06: Design sessions and table reviews 
+* [Week 07](lectures/week-07/README.md) | [📚 Assignment A03: Design Project](assignments/A03-design-project/README.md)
 
 ## Focus Work (Optional)
 
