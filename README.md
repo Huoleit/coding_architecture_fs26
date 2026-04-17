@@ -41,6 +41,8 @@ The central platform for all course content is [Moodle](https://moodle-app2.let.
 * Week 05: Seminar week
 * Week 06: Design sessions and table reviews 
 * [Week 07](lectures/week-07/README.md) | [📚 Assignment A03: Design Project](assignments/A03-design-project/README.md)
+* Week 08: Easter break
+* [Week 09](lectures/week-09/README.md) | No assignment
 
 ## Focus Work (Optional)
 
