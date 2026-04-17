@@ -1,5 +1,5 @@
 # Coding Architecture II: FS26
-## Week 09 – Design to Fabrication
+## Week 09 – Design Reviews
 
 ![Course Banner](../../_static/caii-banner_fs26.jpg)
 
