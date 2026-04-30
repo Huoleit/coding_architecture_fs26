@@ -1,5 +1,5 @@
 # Coding Architecture II: FS26
-## Week 10 – Structural Analysis
+## Week 11 – XR
 
 ![Course Banner](../../_static/caii-banner_fs26.jpg)
 
